@@ -4,14 +4,17 @@ import vsSource from './shaders/main.vert?raw';
 export function run(fsSource) {
     const c = document.getElementById('canvas');
     const check = document.getElementById('check');
-    c.width = 512;
-    c.height = 512;
+    // 表示サイズは 512px 固定のまま、描画解像度だけを下げられるようにする
+    c.style.width = '512px';
+    c.style.height = '512px';
+
+    const info = createInfoPanel(check.closest('p'));
 
     let mx = 0.5, my = 0.5;
     c.addEventListener('mousemove', (e) => {
         const rect = c.getBoundingClientRect();
-        mx = (e.clientX - rect.left) / c.width;
-        my = (e.clientY - rect.top) / c.height;
+        mx = (e.clientX - rect.left) / rect.width;
+        my = (e.clientY - rect.top) / rect.height;
     });
 
     let run = check.checked;
@@ -22,12 +25,24 @@ export function run(fsSource) {
         if (run) {
             // 停止していた時間ぶんずらして続きから再開
             startTime = Date.now() - elapsed * 1000;
+            frames = 0;
+            fpsTime = Date.now();
             render();
         }
     });
 
     const gl = c.getContext('webgl');
-    if (!gl) throw new Error('WebGL is not supported');
+    if (!gl) {
+        info.gpu.textContent = 'WebGL が使えません(ブラウザのハードウェアアクセラレーション設定を確認)';
+        throw new Error('WebGL is not supported');
+    }
+
+    info.gpu.textContent = gpuName();
+    setResolution(info.resolution.value);
+    info.resolution.addEventListener('change', () => {
+        setResolution(info.resolution.value);
+        try { localStorage.setItem('resolution', info.resolution.value); } catch {}
+    });
 
     const prg = createProgram(
         createShader(vsSource, gl.VERTEX_SHADER),
@@ -60,11 +75,23 @@ export function run(fsSource) {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int16Array(index), gl.STATIC_DRAW);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+    let frames = 0;
+    let fpsTime = Date.now();
     render();
 
     function render() {
         if (!run) return;
         elapsed = (Date.now() - startTime) * 0.001;
+
+        // 1 秒ごとに、その間に描けたフレーム数を表示する
+        frames++;
+        const now = Date.now();
+        if (now - fpsTime >= 1000) {
+            info.fps.textContent = (frames * 1000 / (now - fpsTime)).toFixed(1);
+            frames = 0;
+            fpsTime = now;
+        }
 
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.uniform1f(uniLocation.time, elapsed);
@@ -73,7 +100,21 @@ export function run(fsSource) {
         gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
         gl.flush();
 
-        setTimeout(render, 1000 / 30);
+        // GPU が追いつかないと呼ばれる間隔が延びるので、FPS がそのまま重さの目安になる
+        requestAnimationFrame(render);
+    }
+
+    // 描画解像度(canvas の画素数)を変える。CSS で拡大表示されるので見た目の大きさは変わらない
+    function setResolution(size) {
+        c.width = Number(size);
+        c.height = Number(size);
+        gl.viewport(0, 0, c.width, c.height);
+    }
+
+    // GPU 名を取得する。ブラウザによっては隠されていて取れない
+    function gpuName() {
+        const ext = gl.getExtension('WEBGL_debug_renderer_info');
+        return ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
     }
 
     function createShader(src, type) {
@@ -103,4 +144,26 @@ export function run(fsSource) {
         gl.useProgram(program);
         return program;
     }
+}
+
+// 解像度の切り替え・FPS・GPU 名を表示する欄を、auto run の行の下に作る
+function createInfoPanel(after) {
+    const p = document.createElement('p');
+    p.innerHTML =
+        '<label>resolution <select>' +
+        '<option value="512">512</option>' +
+        '<option value="256">256</option>' +
+        '<option value="128">128</option>' +
+        '</select></label>' +
+        ' / FPS <span>-</span>' +
+        '<br>GPU: <span>-</span>';
+    after.after(p);
+
+    const resolution = p.querySelector('select');
+    // 重い環境で下げた解像度を、他のサンプルを開いても引き継ぐ
+    try { resolution.value = localStorage.getItem('resolution') ?? '512'; } catch {}
+    if (!resolution.value) resolution.value = '512';
+
+    const [fps, gpu] = p.querySelectorAll('span');
+    return { resolution, fps, gpu };
 }
