@@ -1,9 +1,9 @@
 import vsSource from './shaders/main.vert?raw';
 
 // 画面全体を覆う板ポリゴンに、渡されたフラグメントシェーダを毎フレーム描画する
-export function run(fsSource: string): void {
-    const c = document.getElementById('canvas') as HTMLCanvasElement;
-    const check = document.getElementById('check') as HTMLInputElement;
+export function run(fsSource) {
+    const c = document.getElementById('canvas');
+    const check = document.getElementById('check');
     c.width = 512;
     c.height = 512;
 
@@ -26,9 +26,8 @@ export function run(fsSource: string): void {
         }
     });
 
-    const ctx = c.getContext('webgl');
-    if (!ctx) throw new Error('WebGL is not supported');
-    const gl: WebGLRenderingContext = ctx;
+    const gl = c.getContext('webgl');
+    if (!gl) throw new Error('WebGL is not supported');
 
     const prg = createProgram(
         createShader(vsSource, gl.VERTEX_SHADER),
@@ -63,7 +62,7 @@ export function run(fsSource: string): void {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     render();
 
-    function render(): void {
+    function render() {
         if (!run) return;
         elapsed = (Date.now() - startTime) * 0.001;
 
@@ -77,7 +76,7 @@ export function run(fsSource: string): void {
         setTimeout(render, 1000 / 30);
     }
 
-    function createShader(src: string, type: number): WebGLShader {
+    function createShader(src, type) {
         const shader = gl.createShader(type);
         if (!shader) throw new Error('createShader failed');
         gl.shaderSource(shader, src);
@@ -90,7 +89,7 @@ export function run(fsSource: string): void {
         return shader;
     }
 
-    function createProgram(vs: WebGLShader, fs: WebGLShader): WebGLProgram {
+    function createProgram(vs, fs) {
         const program = gl.createProgram();
         if (!program) throw new Error('createProgram failed');
         gl.attachShader(program, vs);
