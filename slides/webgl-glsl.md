@@ -3,11 +3,11 @@ marp: true
 theme: default
 paginate: true
 style: |
-  section { font-size: 26px; }
+  section { font-size: 26px; place-content: start; }
   h1 { color: #2a5db0; }
   pre { font-size: 20px; }
   table { font-size: 22px; }
-  section.lead { text-align: center; }
+  section.lead { text-align: center; place-content: safe center center; }
   section.lead h1 { font-size: 64px; }
   section.dense { font-size: 22px; padding-top: 40px; }
   section.dense h1 { font-size: 40px; margin-bottom: 12px; }
