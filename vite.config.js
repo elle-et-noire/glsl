@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 
 // 複数ページをビルド対象にする(dev サーバーは設定なしでも全ページ開ける)
 export default defineConfig({
+    base: './',
     build: {
         rollupOptions: {
             input: {

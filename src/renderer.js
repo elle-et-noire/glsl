@@ -9,6 +9,10 @@ export function run(fsSource) {
     c.style.height = '512px';
 
     const info = createInfoPanel(check.closest('p'));
+    const shaderKey = location.pathname.split('/').pop().replace(/\.html$/, '');
+    let savedSource = null;
+    try { savedSource = localStorage.getItem(shaderKey); } catch {}
+    const editor = createEditor(info.panel, savedSource ?? fsSource);
 
     let mx = 0.5, my = 0.5;
     c.addEventListener('mousemove', (e) => {
@@ -44,16 +48,6 @@ export function run(fsSource) {
         try { localStorage.setItem('resolution', info.resolution.value); } catch {}
     });
 
-    const prg = createProgram(
-        createShader(vsSource, gl.VERTEX_SHADER),
-        createShader(fsSource, gl.FRAGMENT_SHADER));
-
-    const uniLocation = {
-        time: gl.getUniformLocation(prg, 'time'),
-        mouse: gl.getUniformLocation(prg, 'mouse'),
-        resolution: gl.getUniformLocation(prg, 'resolution'),
-    };
-
     // 画面全体を覆う板ポリゴン
     const position = [
         -1.0,  1.0, 0.0,
@@ -66,15 +60,42 @@ export function run(fsSource) {
     const vbo = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(position), gl.STATIC_DRAW);
-    const attLocation = gl.getAttribLocation(prg, 'position');
-    gl.enableVertexAttribArray(attLocation);
-    gl.vertexAttribPointer(attLocation, 3, gl.FLOAT, false, 0, 0);
-
     const ibo = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int16Array(index), gl.STATIC_DRAW);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+    let vs;
+    try { vs = createShader(vsSource, gl.VERTEX_SHADER); }
+    catch (error) {
+        editor.error.textContent = error.message;
+        return;
+    }
+    let current = null;
+    if (!activate(editor.textarea.value) && savedSource !== null) {
+        const savedError = editor.error.textContent;
+        activate(fsSource);
+        editor.error.textContent = savedError;
+    }
+    if (!current) return;
+
+    let compileTimer;
+    editor.textarea.addEventListener('input', onEdit);
+    editor.textarea.addEventListener('keydown', (event) => {
+        if (event.key !== 'Tab') return;
+        event.preventDefault();
+        const start = editor.textarea.selectionStart;
+        const end = editor.textarea.selectionEnd;
+        editor.textarea.setRangeText('    ', start, end, 'end');
+        onEdit();
+    });
+    editor.reset.addEventListener('click', () => {
+        clearTimeout(compileTimer);
+        editor.textarea.value = fsSource;
+        try { localStorage.removeItem(shaderKey); } catch {}
+        activate(fsSource);
+    });
 
     let frames = 0;
     let fpsTime = Date.now();
@@ -94,9 +115,9 @@ export function run(fsSource) {
         }
 
         gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.uniform1f(uniLocation.time, elapsed);
-        gl.uniform2fv(uniLocation.mouse, [mx, my]);
-        gl.uniform2fv(uniLocation.resolution, [c.width, c.height]);
+        gl.uniform1f(current.uniforms.time, elapsed);
+        gl.uniform2fv(current.uniforms.mouse, [mx, my]);
+        gl.uniform2fv(current.uniforms.resolution, [c.width, c.height]);
         gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
         gl.flush();
 
@@ -117,6 +138,56 @@ export function run(fsSource) {
         return ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
     }
 
+    function onEdit() {
+        try { localStorage.setItem(shaderKey, editor.textarea.value); } catch {}
+        clearTimeout(compileTimer);
+        compileTimer = setTimeout(() => activate(editor.textarea.value), 400);
+    }
+
+    // 成功したときだけ描画用プログラムを入れ替える
+    function activate(source) {
+        let next;
+        try {
+            const fs = createShader(source, gl.FRAGMENT_SHADER);
+            let program;
+            try { program = createProgram(vs, fs); }
+            catch (error) {
+                gl.deleteShader(fs);
+                throw error;
+            }
+            next = {
+                program, shader: fs,
+                attribute: gl.getAttribLocation(program, 'position'),
+                uniforms: {
+                    time: gl.getUniformLocation(program, 'time'),
+                    mouse: gl.getUniformLocation(program, 'mouse'),
+                    resolution: gl.getUniformLocation(program, 'resolution'),
+                },
+            };
+        } catch (error) {
+            editor.error.textContent = error.message;
+            return false;
+        }
+
+        if (current && current.attribute !== next.attribute && current.attribute >= 0) {
+            gl.disableVertexAttribArray(current.attribute);
+        }
+        gl.useProgram(next.program);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+        if (next.attribute >= 0) {
+            gl.enableVertexAttribArray(next.attribute);
+            gl.vertexAttribPointer(next.attribute, 3, gl.FLOAT, false, 0, 0);
+        }
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+        if (current) {
+            gl.deleteProgram(current.program);
+            gl.deleteShader(current.shader);
+        }
+        current = next;
+        editor.error.textContent = '';
+        return true;
+    }
+
     function createShader(src, type) {
         const shader = gl.createShader(type);
         if (!shader) throw new Error('createShader failed');
@@ -124,8 +195,8 @@ export function run(fsSource) {
         gl.compileShader(shader);
         if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
             const log = gl.getShaderInfoLog(shader);
-            alert(log);
-            throw new Error(log ?? 'shader compile error');
+            gl.deleteShader(shader);
+            throw new Error(log || 'shader compile error');
         }
         return shader;
     }
@@ -138,10 +209,9 @@ export function run(fsSource) {
         gl.linkProgram(program);
         if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
             const log = gl.getProgramInfoLog(program);
-            alert(log);
-            throw new Error(log ?? 'program link error');
+            gl.deleteProgram(program);
+            throw new Error(log || 'program link error');
         }
-        gl.useProgram(program);
         return program;
     }
 }
@@ -165,5 +235,23 @@ function createInfoPanel(after) {
     if (!resolution.value) resolution.value = '512';
 
     const [fps, gpu] = p.querySelectorAll('span');
-    return { resolution, fps, gpu };
+    return { panel: p, resolution, fps, gpu };
+}
+
+// シェーダの編集欄を情報欄の下に作る
+function createEditor(after, source) {
+    const panel = document.createElement('div');
+    panel.style.width = '512px';
+    panel.innerHTML = '<label>fragment shader</label><br><button type="button">元に戻す</button><pre aria-live="polite"></pre>';
+    const textarea = document.createElement('textarea');
+    textarea.rows = 24;
+    textarea.spellcheck = false;
+    textarea.wrap = 'off';
+    textarea.value = source;
+    textarea.style.cssText = 'display:block;box-sizing:border-box;width:100%;min-width:512px;resize:both;font-family:monospace;';
+    panel.querySelector('label').after(textarea);
+    const error = panel.querySelector('pre');
+    error.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;color:#b00020;';
+    after.after(panel);
+    return { textarea, reset: panel.querySelector('button'), error };
 }
