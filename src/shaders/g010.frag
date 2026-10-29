@@ -21,6 +21,10 @@ vec3 getNormal(vec3 p){
 }
 
 void main(void){
+	// 【演習】
+	// 1. `lightDir` を `vec3(0.577, 0.577, 0.577)` にする → 光が右上から当たる
+	// 2. `clamp(..., 0.1, 1.0)` の 0.1 を 0.0 にする → 影側が真っ黒になる
+	// 3. `gl_FragColor = vec4(vec3(diff), 1.0);` を `gl_FragColor = vec4(normal, 1.0);` にする → 法線の向きが色で見える
 
 	vec2 p = (gl_FragCoord.xy * 2.0 - resolution) / min(resolution.x, resolution.y);
 

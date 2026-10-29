@@ -10,6 +10,9 @@ vec3 hsv(float h, float s, float v){
 }
 
 void main(void){
+	// 【演習】
+	// 1. for 文の 360 と `float(j) / 360.0` の 360 を両方 50 にする → 模様が粗くなる
+	// 2. ジュリア集合にする:`vec2 z = p;` にし、ループ内の `+ x * y` を `+ vec2(-0.345, 0.654)` にする(g006 と同じ形)
 
 	vec2 m = vec2(mouse.x * 2.0 - 1.0, -mouse.y * 2.0 + 1.0);
 

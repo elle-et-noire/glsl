@@ -10,6 +10,10 @@ float distanceFunc(vec3 p){
 }
 
 void main(void){
+	// 【演習】
+	// 1. `sphereSize` を 0.5 にする → 球が小さくなる
+	// 2. for 文の 16 を 3 にする → レイが球まで届かず、縁から欠ける
+	// 3. `cPos` の z を 2.0 から 4.0 にする → カメラが離れて球が小さく見える
 
 	vec2 p = (gl_FragCoord.xy * 2.0 - resolution) / min(resolution.x, resolution.y);
 

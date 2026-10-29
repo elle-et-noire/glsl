@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && npm run build:slides",
+    "build:offline": "node scripts/build-offline.mjs && marp --no-stdin slides/webgl-glsl.md -o dist-offline/glsl-offline/slides/index.html",
     "preview": "vite preview",
-    "build:slides": "marp slides/webgl-glsl.md -o dist/slides/index.html"
+    "build:slides": "marp --no-stdin slides/webgl-glsl.md -o dist/slides/index.html"
   },
   "devDependencies": {
     "@marp-team/marp-cli": "^4.5.1",

@@ -4,6 +4,11 @@ uniform vec2  mouse;
 uniform vec2  resolution;
 
 void main(void){
+    // 【演習】
+    // 1. `* 0.5` を `* 1.0` にする → 色が濃くなる
+    // 2. `0.05 / length(p - m)` の 0.05 を 0.2 にする → マウスの光が大きくなる
+    // 3. `vec3(color, 0.0)` を `vec3(0.0, color)` にする → 色の組み合わせが変わる
+
     // ピクセル座標を中心原点・短辺基準の -1〜1 に正規化
     vec2 p = (gl_FragCoord.xy * 2.0 - resolution) / min(resolution.x, resolution.y);
     // -1〜1 を 0〜1 に写して色にする

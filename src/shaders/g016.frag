@@ -40,6 +40,10 @@ vec3 genNormal(vec3 p){
 }
 
 void main(void){
+	// 【演習】
+	// 1. `smoothMin(d1, d2, 8.0)` の 8.0 を 2.0 にする → 大きく溶け合う(32.0 にすると境目がくっきりする)
+	// 2. `smoothMin(d1, d2, 8.0)` を `min(d1, d2)` にする → ただ重ねただけになる
+	// 3. トーラスの `vec2(1.5, 0.25)` を `vec2(1.5, 0.5)` にする → 輪が太くなる
 
 	vec2 p = (gl_FragCoord.xy * 2.0 - resolution) / min(resolution.x, resolution.y);
 

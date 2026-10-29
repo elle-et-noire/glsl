@@ -28,6 +28,9 @@ vec3 getNormal(vec3 p){
 }
 
 void main(void){
+	// 【演習】
+	// 1. `mod(p, 4.0) - 2.0` を `mod(p, 3.0) - 1.5` にする → 球の間隔が詰まる
+	// 2. `sphereSize` を 0.5 にする → 球が小さくなり、奥まで見える
 
 	vec2 p = (gl_FragCoord.xy * 2.0 - resolution) / min(resolution.x, resolution.y);
 

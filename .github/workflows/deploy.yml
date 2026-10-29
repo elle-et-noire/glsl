@@ -28,6 +28,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - run: npm run build:offline
+      - run: cd dist-offline && zip -qr ../dist/glsl-offline.zip glsl-offline
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
