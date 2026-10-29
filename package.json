@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "vite build && npm run build:slides",
+    "preview": "vite preview",
+    "build:slides": "marp slides/webgl-glsl.md -o dist/slides/index.html"
   },
   "devDependencies": {
+    "@marp-team/marp-cli": "^4.5.1",
     "vite": "^6.4.5"
   }
 }
