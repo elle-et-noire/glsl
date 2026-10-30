@@ -238,6 +238,8 @@ gl_FragColor = vec4(vec3(diff), 1.0);
 
 `ColorRect` ノードに `ShaderMaterial` を付け、`.frag` の中身を貼って上の対応どおりに書き換える
 
+Unity は HLSL：`vec3` → `float3`、`mix` → `lerp` などの書き換えが要る（考え方は同じ）
+
 ---
 
 <!-- _class: dense -->
